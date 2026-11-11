@@ -17,7 +17,7 @@ export const SHAPES = {
     label: 'Stern',
     polygon: starPolygon(),
     // vertikaler Schwerpunkt für den Namensblock
-    centerY: 58,
+    centerY: 55,
   },
 };
 
@@ -66,105 +66,129 @@ export function spanAt(pts, y, cx = 50) {
   return null;
 }
 
-/** Nutzbare Breite für eine Zeile zwischen y0 und y1 (mit Rand). */
-function rowSpan(pts, y0, y1, margin) {
-  let left = -Infinity;
-  let right = Infinity;
-  const steps = 4;
-  for (let s = 0; s <= steps; s++) {
-    const sp = spanAt(pts, y0 + ((y1 - y0) * s) / steps);
-    if (!sp) return null;
-    left = Math.max(left, sp[0]);
-    right = Math.min(right, sp[1]);
+/** Alle Innen-Abschnitte des Polygons auf Höhe y, von links nach rechts. */
+export function segmentsAt(pts, y) {
+  const xs = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
+      xs.push(x1 + ((y - y1) / (y2 - y1)) * (x2 - x1));
+    }
   }
-  left += margin;
-  right -= margin;
-  return right > left ? [left, right] : null;
+  xs.sort((a, b) => a - b);
+  const segs = [];
+  for (let i = 0; i + 1 < xs.length; i += 2) segs.push([xs[i], xs[i + 1]]);
+  return segs;
+}
+
+function intersect(a, b) {
+  const out = [];
+  for (const [a0, a1] of a) {
+    for (const [b0, b1] of b) {
+      const l = Math.max(a0, b0);
+      const r = Math.min(a1, b1);
+      if (r > l) out.push([l, r]);
+    }
+  }
+  return out;
+}
+
+/** Abschnitte, die über die ganze Zeilenhöhe innen liegen (mit Rand). */
+function rowSegments(pts, y0, y1, margin) {
+  // An den Rändern der Zeile und an allen Ecken dazwischen prüfen,
+  // da die Kanten dazwischen gerade verlaufen.
+  const ys = [y0, y1, ...pts.map((p) => p[1]).filter((y) => y > y0 && y < y1)];
+  let segs = null;
+  for (const y of ys) {
+    const s = segmentsAt(pts, y);
+    segs = segs ? intersect(segs, s) : s;
+    if (!segs.length) return [];
+  }
+  return segs.map(([l, r]) => [l + margin, r - margin]).filter(([l, r]) => r > l);
 }
 
 /**
- * Verteilt Namen im Inneren der Form.
+ * Verteilt Namen im Inneren der Form, so groß wie möglich.
+ * Zeilen dürfen die ganze Höhe nutzen, auch die Spitze oben und die Arme.
  * measure(name) liefert die Textbreite bei Schriftgröße 1.
  * Ergebnis: { fontSize, items: [{ name, x, y }] } mit x/y = Mittelpunkt (0..100).
  */
 export function layoutNames(shape, names, measure, opts = {}) {
   const pts = shape.polygon;
-  const maxFont = opts.maxFont ?? 11;
+  const maxFont = opts.maxFont ?? 14;
   const minFont = opts.minFont ?? 1.2;
-  const lineHeight = opts.lineHeight ?? 1.3;
-  const gap = opts.gap ?? 0.9; // Abstand zwischen Namen, relativ zur Schriftgröße
+  const lineHeight = opts.lineHeight ?? 1.18;
+  const gap = opts.gap ?? 0.7; // Abstand zwischen Namen, relativ zur Schriftgröße
   if (!names.length) return { fontSize: maxFont, items: [] };
 
   const widths = names.map((n) => measure(n));
+  const yMin = Math.min(...pts.map((p) => p[1]));
+  const yMax = Math.max(...pts.map((p) => p[1]));
+  const targetCenter = opts.centerY ?? shape.centerY;
 
+  // Versucht eine Anordnung mit Schriftgröße f und Startversatz top.
+  const place = (f, top) => {
+    const rh = f * lineHeight;
+    const margin = f * 0.3;
+    const rows = [];
+    let i = 0;
+    for (let y = top; y + rh <= yMax && i < names.length; y += rh) {
+      const segs = rowSegments(pts, y, y + rh, margin).map((sg) => ({ sg, items: [], width: 0 }));
+      for (const seg of segs) {
+        const avail = seg.sg[1] - seg.sg[0];
+        while (i < names.length) {
+          const w = widths[i] * f;
+          const need = seg.items.length ? seg.width + gap * f + w : w;
+          if (need > avail) break;
+          seg.items.push(i);
+          seg.width = need;
+          i++;
+        }
+      }
+      rows.push({ y: y + rh / 2, segs });
+    }
+    if (i < names.length) return null;
+    while (rows.length && !rows[rows.length - 1].segs.some((s) => s.items.length)) rows.pop();
+    while (rows.length && !rows[0].segs.some((s) => s.items.length)) rows.shift();
+    return rows;
+  };
+
+  // Für eine Schriftgröße alle Startpositionen durchprobieren,
+  // die Anordnung nehmen, deren Mitte am besten zur Form passt.
   const tryFit = (f) => {
     const rh = f * lineHeight;
-    const margin = f * 0.35;
-    const maxRows = Math.floor(90 / rh);
-    for (let k = 1; k <= maxRows; k++) {
-      const top = shape.centerY - (k * rh) / 2;
-      const rows = [];
-      let ok = true;
-      for (let r = 0; r < k; r++) {
-        const sp = rowSpan(pts, top + r * rh, top + (r + 1) * rh, margin);
-        if (!sp) {
-          ok = false;
-          break;
-        }
-        rows.push({ span: sp, y: top + (r + 0.5) * rh, items: [], width: 0 });
-      }
-      if (!ok) continue;
-      // Gleichmäßig auf die Zeilen verteilen: zuerst gierig füllen
-      let ri = 0;
-      let fits = true;
-      for (let i = 0; i < names.length; i++) {
-        const w = widths[i] * f;
-        while (ri < rows.length) {
-          const row = rows[ri];
-          const avail = row.span[1] - row.span[0];
-          const need = row.items.length ? row.width + gap * f + w : w;
-          if (need <= avail) {
-            row.items.push(i);
-            row.width = need;
-            break;
-          }
-          ri++;
-        }
-        if (ri >= rows.length) {
-          fits = false;
-          break;
-        }
-      }
-      if (!fits) continue;
-      // Leere Zeilen am Ende vermeiden: Block neu zentrieren
-      const used = rows.filter((r) => r.items.length);
-      if (used.length < rows.length) continue;
-      const items = [];
-      for (const row of rows) {
-        const mid = (row.span[0] + row.span[1]) / 2;
-        let x = mid - row.width / 2;
-        for (const i of row.items) {
-          const w = widths[i] * f;
-          items.push({ name: names[i], x: x + w / 2, y: row.y });
+    const step = rh / 6;
+    let best = null;
+    for (let top = yMin; top + rh <= yMax; top += step) {
+      const rows = place(f, top);
+      if (!rows || !rows.length) continue;
+      const mid = (rows[0].y + rows[rows.length - 1].y) / 2;
+      const score = Math.abs(mid - targetCenter);
+      if (!best || score < best.score) best = { rows, score };
+    }
+    if (!best) return null;
+    const items = [];
+    for (const row of best.rows) {
+      for (const seg of row.segs) {
+        let x = (seg.sg[0] + seg.sg[1]) / 2 - seg.width / 2;
+        for (const idx of seg.items) {
+          const w = widths[idx] * f;
+          items.push({ name: names[idx], x: x + w / 2, y: row.y });
           x += w + gap * f;
         }
       }
-      return items;
     }
-    return null;
+    return items;
   };
 
-  // Binäre Suche nach der größten passenden Schrift
   let lo = minFont;
   let hi = maxFont;
   let best = tryFit(hi);
   if (best) return { fontSize: hi, items: best };
   best = tryFit(lo);
-  if (!best) {
-    // Passt nicht einmal klein: kleinste Größe trotzdem nutzen (überlappt ggf.)
-    return { fontSize: lo, items: fallbackGrid(names, lo, shape) };
-  }
-  for (let iter = 0; iter < 18; iter++) {
+  if (!best) return { fontSize: lo, items: fallbackGrid(names, lo, shape) };
+  for (let iter = 0; iter < 14; iter++) {
     const mid = (lo + hi) / 2;
     const res = tryFit(mid);
     if (res) {
