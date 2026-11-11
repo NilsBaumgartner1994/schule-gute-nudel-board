@@ -1,0 +1,52 @@
+# Prüft jeden Pull Request und jeden Push auf Nebenzweige.
+# Wenn alle Tests grün sind, wird ein (nicht als Entwurf markierter) Pull Request
+# automatisch in main übernommen und die Seite neu veröffentlicht.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+
+  automerge:
+    needs: test
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Pull Request übernehmen
+        run: gh pr merge "${{ github.event.pull_request.number }}" --squash --delete-branch
+      # Merges mit dem GITHUB_TOKEN lösen keinen Push-Workflow aus,
+      # deshalb wird die Veröffentlichung hier ausdrücklich gestartet.
+      - name: Seite veröffentlichen
+        run: gh workflow run pages.yml --ref main

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gute-Nudel-Board</title>
+    <meta name="description" content="Ein großer Stern für die Klasse. Namen antippen und sie fliegen in den Stern." />
+    <meta name="theme-color" content="#cfe6ff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Nudel-Board" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <link rel="preload" href="fonts/andika-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/andika-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button id="menuBtn" class="icon-btn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </button>
+      <h1 id="groupTitle" class="group-title"></h1>
+    </header>
+
+    <main class="layout">
+      <section class="stage" aria-label="Stern">
+        <div id="shape" class="shape">
+          <svg id="shapeSvg" class="shape-svg" viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+              <radialGradient id="starFill" cx="50%" cy="45%" r="60%">
+                <stop offset="0%" stop-color="#fff6c2" />
+                <stop offset="60%" stop-color="#ffdd55" />
+                <stop offset="100%" stop-color="#ffc21a" />
+              </radialGradient>
+            </defs>
+            <path id="shapePath" fill="url(#starFill)" />
+          </svg>
+          <div id="shapeNames" class="shape-names" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="Kinder">
+        <div class="group-tabs" id="groupTabs" role="tablist" aria-label="Gruppen"></div>
+        <ul id="kidList" class="kid-list"></ul>
+        <p id="emptyHint" class="empty-hint" hidden></p>
+        <div class="sidebar-actions">
+          <button id="clearBtn" class="btn btn-soft">Stern leeren</button>
+          <button id="editBtn" class="btn btn-soft">Gruppen bearbeiten</button>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Burger-Menü -->
+    <div id="menuBackdrop" class="backdrop" hidden></div>
+    <nav id="menu" class="menu" aria-label="Menü" hidden>
+      <div class="menu-head">
+        <strong>Menü</strong>
+        <button id="menuClose" class="icon-btn" aria-label="Menü schließen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <button class="menu-item" data-action="edit">Gruppen bearbeiten</button>
+      <button class="menu-item" data-action="share">Teilen (Link und QR-Code)</button>
+      <button class="menu-item" data-action="clear">Stern leeren</button>
+      <label class="menu-item toggle">
+        <span>Animationen</span>
+        <input id="animToggle" type="checkbox" role="switch" />
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <p class="menu-note">Alle Daten bleiben nur auf diesem Gerät. Zum Übertragen auf ein anderes Gerät den Link oder QR-Code nutzen.</p>
+    </nav>
+
+    <!-- Gruppen bearbeiten -->
+    <dialog id="editDialog" class="dialog">
+      <form method="dialog" class="dialog-inner" id="editForm">
+        <h2>Gruppen bearbeiten</h2>
+        <div class="edit-groups" id="editGroupList" role="listbox" aria-label="Gruppen"></div>
+        <button type="button" id="addGroupBtn" class="btn btn-soft">+ Neue Gruppe</button>
+        <div id="editFields" class="edit-fields">
+          <label class="field">
+            <span>Name der Gruppe</span>
+            <input id="groupNameInput" type="text" autocomplete="off" placeholder="z. B. Klasse 1a" />
+          </label>
+          <label class="field">
+            <span>Kinder (ein Name pro Zeile)</span>
+            <textarea id="kidsInput" rows="10" placeholder="Anna&#10;Ben&#10;Can"></textarea>
+          </label>
+          <button type="button" id="deleteGroupBtn" class="btn btn-danger">Gruppe löschen</button>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-primary" value="done">Fertig</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Teilen -->
+    <dialog id="shareDialog" class="dialog">
+      <form method="dialog" class="dialog-inner">
+        <h2>Teilen</h2>
+        <p class="muted">Mit diesem Link oder QR-Code öffnest du die Seite mit allen Gruppen auf einem anderen Gerät. Der Link enthält die Namen der Kinder, also bitte nur an Kolleginnen und Kollegen weitergeben.</p>
+        <div id="qrBox" class="qr-box"></div>
+        <label class="field">
+          <span>Link</span>
+          <input id="shareLink" type="text" readonly />
+        </label>
+        <div class="dialog-actions">
+          <button type="button" id="copyLinkBtn" class="btn btn-soft">Link kopieren</button>
+          <button type="button" id="nativeShareBtn" class="btn btn-soft" hidden>Teilen …</button>
+          <button class="btn btn-primary" value="done">Schließen</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Rückfrage beim Öffnen eines Links -->
+    <dialog id="importDialog" class="dialog">
+      <form method="dialog" class="dialog-inner">
+        <h2>Gruppen aus dem Link übernehmen?</h2>
+        <p class="muted" id="importText"></p>
+        <div class="dialog-actions">
+          <button class="btn btn-soft" value="keep">Meine behalten</button>
+          <button class="btn btn-primary" value="import">Übernehmen</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
