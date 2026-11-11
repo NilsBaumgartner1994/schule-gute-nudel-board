@@ -7,7 +7,8 @@ Deshalb gilt hier ein bewusst einfacher Ablauf.
 
 - **Direkt auf `main` pushen ist ausdrücklich erlaubt und erwünscht.**
   Kein Umweg über Pull Requests nötig. Jeder Push auf `main` veröffentlicht die Seite
-  automatisch als GitHub Page (`.github/workflows/pages.yml`).
+  automatisch als GitHub Page (Einstellung „Deploy from a branch“, `main`, Ordner `/`).
+  Die Datei `index.html` im Hauptordner leitet nur nach `public/` weiter.
 - Vor dem Push immer die Tests laufen lassen: `npm install` und dann `npm test`.
   Schlagen Tests fehl, erst reparieren, dann pushen. Tests niemals abschalten, um grün zu werden.
 - Wird doch ein Pull Request geöffnet, prüft `.github/workflows/ci.yml` ihn und übernimmt ihn
@@ -22,7 +23,7 @@ Deshalb gilt hier ein bewusst einfacher Ablauf.
   - `js/codec.js`: Gruppen kompakt in die URL schreiben und daraus lesen (deflate-raw und base64url)
   - `js/shapes.js`: Form in der Mitte (Stern) und Verteilung der Namen darin.
     Neue Formen (z. B. Kreis) hier in `SHAPES` ergänzen.
-  - `sw.js`: Service Worker für Offline first. Neue Dateien in `FILES` eintragen!
+  - `sw.js`: Service Worker für Offline first (erst Netz, dann Speicher). Neue Dateien in `FILES` eintragen!
   - `fonts/`: Schrift Andika (Grundschul-taugliches a und g), lokal eingebunden
   - `vendor/qrcode.mjs`: QR-Code-Erzeugung (MIT), lokal eingebunden
 - `tests/`: Unit-Tests (`*.test.mjs`) und Browser-Tests mit Playwright (`app.e2e.test.mjs`)

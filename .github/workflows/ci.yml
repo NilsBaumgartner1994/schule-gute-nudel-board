@@ -1,13 +1,14 @@
-# Prüft jeden Pull Request und jeden Push auf Nebenzweige.
+# Prüft jeden Push und jeden Pull Request.
 # Wenn alle Tests grün sind, wird ein (nicht als Entwurf markierter) Pull Request
-# automatisch in main übernommen und die Seite neu veröffentlicht.
+# automatisch in main übernommen.
+# Die Seite selbst veröffentlicht GitHub Pages bei jedem Push auf main von allein
+# (Einstellung "Deploy from a branch", main, / (root)).
 name: CI
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches-ignore: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -39,14 +40,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      actions: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Pull Request übernehmen
         run: gh pr merge "${{ github.event.pull_request.number }}" --squash --delete-branch
-      # Merges mit dem GITHUB_TOKEN lösen keinen Push-Workflow aus,
-      # deshalb wird die Veröffentlichung hier ausdrücklich gestartet.
-      - name: Seite veröffentlichen
-        run: gh workflow run pages.yml --ref main

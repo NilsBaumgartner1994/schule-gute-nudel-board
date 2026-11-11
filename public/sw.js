@@ -1,8 +1,9 @@
 // Offline first: alle Dateien der App werden beim ersten Besuch zwischengespeichert.
-// BUILD wird beim Veröffentlichen automatisch durch die Commit-ID ersetzt,
-// dadurch bekommt jede neue Version einen frischen Cache.
-const BUILD = '__BUILD__';
-const CACHE = `gnb-${BUILD}`;
+// Strategie "erst Netz, dann Speicher": Ist Internet da, kommt immer die neueste
+// Version (und der Speicher wird aufgefrischt). Ohne Internet oder bei sehr
+// langsamem Netz kommt die gespeicherte Version. So braucht es keinen Build-Schritt.
+const CACHE = 'gnb-v1';
+const NET_TIMEOUT = 3000;
 
 const FILES = [
   './',
@@ -40,24 +41,36 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+function fromNetwork(req) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), NET_TIMEOUT);
+    fetch(req, { cache: 'no-cache' }).then(
+      (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const navigate = req.mode === 'navigate';
+  const key = navigate ? 'index.html' : req;
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      // Seitenaufrufe (auch mit ?…) immer aus der gespeicherten index.html bedienen
-      const key = req.mode === 'navigate' ? 'index.html' : req;
-      const hit = await cache.match(key, { ignoreSearch: req.mode === 'navigate' });
-      if (hit) return hit;
       try {
-        const res = await fetch(req);
-        if (res.ok) cache.put(req, res.clone());
+        const res = await fromNetwork(req);
+        if (res.ok) await cache.put(key, res.clone());
         return res;
       } catch (err) {
-        if (req.mode === 'navigate') {
-          const fallback = await cache.match('index.html');
-          if (fallback) return fallback;
-        }
+        const hit = await cache.match(key, { ignoreSearch: navigate });
+        if (hit) return hit;
         throw err;
       }
     }),

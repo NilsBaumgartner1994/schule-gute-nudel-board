@@ -3,7 +3,7 @@
 Ein großer Stern für die Klasse. Rechts stehen die Namen der Kinder.
 Tippt man einen Namen an, fliegt er in den Stern. Nochmal antippen nimmt ihn wieder heraus.
 
-**Zur Seite:** https://nilsbaumgartner1994.github.io/schule-gute-nudel-board/
+**Zur Seite:** https://nilsbaumgartner1994.github.io/schule-gute-nudel-board/public/
 
 ## Was die Seite kann
 
@@ -25,13 +25,14 @@ npm start      # Vorschau auf http://127.0.0.1:8080
 npm test       # Unit- und Browser-Tests
 ```
 
-Jeder Push auf `main` testet und veröffentlicht die Seite automatisch.
+Jeder Push auf `main` veröffentlicht die Seite automatisch und wird getestet.
 Pull Requests werden getestet und bei grünen Tests automatisch übernommen.
 Regeln für KI-Agenten: siehe [AGENTS.md](AGENTS.md).
 
 ### Einmalige Einrichtung auf GitHub
 
-Unter *Settings → Pages → Build and deployment → Source* „GitHub Actions“ auswählen.
+Unter *Settings → Pages → Build and deployment*: „Deploy from a branch“, Branch `main`, Ordner `/ (root)`.
+Die `index.html` im Hauptordner leitet auf die App in `public/` weiter.
 
 ## Lizenzen
 
