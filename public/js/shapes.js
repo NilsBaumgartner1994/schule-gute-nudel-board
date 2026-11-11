@@ -2,7 +2,7 @@
 // 0..100 x 0..100 und einen Mittelpunkt, um den die Namen angeordnet werden.
 // Später können hier weitere Formen (z. B. Kreis, Herz) ergänzt werden.
 
-function starPolygon({ cx = 50, cy = 53, outer = 49, ratio = 0.56, points = 5 } = {}) {
+function starPolygon({ cx = 50, cy = 54.5, outer = 52, ratio = 0.56, points = 5 } = {}) {
   const pts = [];
   for (let i = 0; i < points * 2; i++) {
     const r = i % 2 === 0 ? outer : outer * ratio;
@@ -17,7 +17,7 @@ export const SHAPES = {
     label: 'Stern',
     polygon: starPolygon(),
     // vertikaler Schwerpunkt für den Namensblock
-    centerY: 55,
+    centerY: 56.5,
   },
 };
 
