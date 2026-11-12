@@ -9,7 +9,7 @@ Tippt man einen Namen an, fliegt er in den Stern. Nochmal antippen nimmt ihn wie
 
 - Gruppen bzw. Klassen anlegen (z. B. „Klasse 1a“) und per Tipp wechseln
 - Beliebig viele Kinder pro Gruppe, die Schrift im Stern passt sich automatisch an
-- Grundschulschrift (Andika mit dem geschriebenen a)
+- Grundschulschrift ABeeZee (freie Web-Version von ABeZeh); ist ABeZeh auf dem Gerät installiert, wird diese genutzt
 - Funktioniert offline. Nach dem ersten Aufruf auch ohne Internet, z. B. als App auf dem Home-Bildschirm des iPads
 - Alle Daten bleiben nur auf dem Gerät
 - Teilen per Link oder QR-Code: Der Link enthält alle Gruppen in kurzer, gepackter Form.
@@ -36,5 +36,5 @@ Die `index.html` im Hauptordner leitet auf die App in `public/` weiter.
 
 ## Lizenzen
 
-- Schrift Andika: SIL Open Font License (`public/fonts/OFL-Andika.txt`)
+- Schrift ABeeZee: SIL Open Font License (`public/fonts/OFL-ABeeZee.txt`)
 - QR-Code-Generator von Kazuhiko Arase: MIT

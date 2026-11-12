@@ -24,7 +24,7 @@ Deshalb gilt hier ein bewusst einfacher Ablauf.
   - `js/shapes.js`: Form in der Mitte (Stern) und Verteilung der Namen darin.
     Neue Formen (z. B. Kreis) hier in `SHAPES` ergänzen.
   - `sw.js`: Service Worker für Offline first (erst Netz, dann Speicher). Neue Dateien in `FILES` eintragen!
-  - `fonts/`: Schrift Andika (Grundschul-taugliches a und g), lokal eingebunden
+  - `fonts/`: Schrift ABeeZee (freie Web-Version der Grundschulschrift ABeZeh), lokal eingebunden
   - `vendor/qrcode.mjs`: QR-Code-Erzeugung (MIT), lokal eingebunden
 - `tests/`: Unit-Tests (`*.test.mjs`) und Browser-Tests mit Playwright (`app.e2e.test.mjs`)
 - `scripts/serve.mjs`: lokale Vorschau mit `npm start` (http://127.0.0.1:8080)

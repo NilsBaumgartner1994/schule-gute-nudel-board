@@ -2,7 +2,7 @@
 // Strategie "erst Netz, dann Speicher": Ist Internet da, kommt immer die neueste
 // Version (und der Speicher wird aufgefrischt). Ohne Internet oder bei sehr
 // langsamem Netz kommt die gespeicherte Version. So braucht es keinen Build-Schritt.
-const CACHE = 'gnb-v1';
+const CACHE = 'gnb-v2';
 const NET_TIMEOUT = 3000;
 
 const FILES = [
@@ -13,10 +13,8 @@ const FILES = [
   'js/codec.js',
   'js/shapes.js',
   'vendor/qrcode.mjs',
-  'fonts/andika-latin-400-normal.woff2',
-  'fonts/andika-latin-700-normal.woff2',
-  'fonts/andika-latin-ext-400-normal.woff2',
-  'fonts/andika-latin-ext-700-normal.woff2',
+  'fonts/abeezee-regular.woff',
+  'fonts/abeezee-italic.woff',
   'manifest.webmanifest',
   'icons/icon.svg',
   'icons/icon-180.png',

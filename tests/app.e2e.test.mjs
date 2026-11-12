@@ -114,7 +114,7 @@ test('Seite funktioniert offline', async () => {
   await page.waitForSelector('.kid-btn');
   const font = await page.evaluate(async () => {
     await document.fonts.ready;
-    return document.fonts.check('700 20px Andika');
+    return document.fonts.check('700 20px ABeeZee');
   });
   assert.ok(font, 'Schrift offline geladen');
   await context.close();
