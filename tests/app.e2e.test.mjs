@@ -119,3 +119,19 @@ test('Seite funktioniert offline', async () => {
   assert.ok(font, 'Schrift offline geladen');
   await context.close();
 });
+
+test('Namensleiste lässt sich ein- und aufklappen und bleibt so', async () => {
+  const { context, page, errors } = await freshPage();
+  const starWidth = () => page.$eval('.stage', (n) => n.clientWidth);
+  const before = await starWidth();
+  await page.click('#sidebarToggle');
+  assert.equal(await page.isVisible('.kid-btn'), false);
+  await page.waitForFunction((w) => document.querySelector('.stage').clientWidth > w, before);
+  await page.reload();
+  await page.waitForSelector('#sidebarToggle');
+  assert.equal(await page.isVisible('.kid-btn'), false);
+  await page.click('#sidebarToggle');
+  assert.equal(await page.isVisible('.kid-btn'), true);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

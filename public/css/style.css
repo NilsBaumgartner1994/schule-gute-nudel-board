@@ -528,6 +528,50 @@ button {
   box-shadow: var(--shadow);
 }
 
+/* ---------- Namensleiste ein- und ausklappen ---------- */
+.sidebar-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 10px;
+}
+.sidebar-toggle {
+  align-self: flex-start;
+  width: 48px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: 12px;
+  background: var(--soft);
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.sidebar-toggle:hover {
+  background: var(--soft-hover);
+}
+.sidebar-toggle svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.layout.sidebar-closed {
+  grid-template-columns: 1fr auto;
+}
+.layout.sidebar-closed .sidebar {
+  align-self: start;
+  padding: 6px;
+}
+.layout.sidebar-closed .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
 /* ---------- Schmale Bildschirme (Handy hochkant) ---------- */
 @media (max-width: 720px) {
   body {
@@ -545,6 +589,18 @@ button {
   }
   .shape {
     width: 100cqw;
+  }
+  .layout.sidebar-closed {
+    grid-template-columns: 1fr;
+  }
+  .layout.sidebar-closed .sidebar {
+    justify-self: end;
+  }
+  .sidebar-toggle svg {
+    transform: rotate(90deg);
+  }
+  .layout.sidebar-closed .sidebar-toggle svg {
+    transform: rotate(-90deg);
   }
   .kid-list {
     max-height: none;

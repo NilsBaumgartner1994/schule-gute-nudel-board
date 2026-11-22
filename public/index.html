@@ -40,13 +40,18 @@
         </div>
       </section>
 
-      <aside class="sidebar" aria-label="Kinder">
+      <aside id="sidebar" class="sidebar" aria-label="Kinder">
+        <button id="sidebarToggle" class="sidebar-toggle" aria-controls="sidebarBody" aria-expanded="true" aria-label="Namen einklappen" title="Namen einklappen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+        <div id="sidebarBody" class="sidebar-body">
         <div class="group-tabs" id="groupTabs" role="tablist" aria-label="Gruppen"></div>
         <ul id="kidList" class="kid-list"></ul>
         <p id="emptyHint" class="empty-hint" hidden></p>
         <div class="sidebar-actions">
           <button id="clearBtn" class="btn btn-soft">Stern leeren</button>
           <button id="editBtn" class="btn btn-soft">Gruppen bearbeiten</button>
+        </div>
         </div>
       </aside>
     </main>

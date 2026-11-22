@@ -22,6 +22,7 @@ function defaultState() {
     settings: {
       animations: !matchMedia('(prefers-reduced-motion: reduce)').matches,
       shape: 'star',
+      sidebarOpen: true,
     },
   };
 }
@@ -90,6 +91,9 @@ const el = {
   clearBtn: $('clearBtn'),
   editBtn: $('editBtn'),
   toast: $('toast'),
+  layout: document.querySelector('.layout'),
+  sidebarToggle: $('sidebarToggle'),
+  sidebarBody: $('sidebarBody'),
 };
 
 // ---------- Hilfsfunktionen ----------
@@ -425,6 +429,24 @@ el.animToggle.addEventListener('change', () => {
   document.documentElement.classList.toggle('no-anim', !animationsOn());
 });
 el.clearBtn.addEventListener('click', clearStar);
+
+// ---------- Namensleiste ein- und ausklappen ----------
+
+function applySidebar() {
+  const open = state.settings.sidebarOpen !== false;
+  el.layout.classList.toggle('sidebar-closed', !open);
+  el.sidebarBody.hidden = !open;
+  el.sidebarToggle.setAttribute('aria-expanded', String(open));
+  const label = open ? 'Namen einklappen' : 'Namen aufklappen';
+  el.sidebarToggle.setAttribute('aria-label', label);
+  el.sidebarToggle.title = label;
+}
+el.sidebarToggle.addEventListener('click', () => {
+  state.settings.sidebarOpen = state.settings.sidebarOpen === false;
+  applySidebar();
+  saveState();
+});
+applySidebar();
 el.editBtn.addEventListener('click', openEditor);
 
 // ---------- Gruppen bearbeiten ----------
