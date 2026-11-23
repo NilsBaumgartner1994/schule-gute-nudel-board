@@ -189,3 +189,31 @@ test('Ampel: Name antippen, dann Farbe antippen verschiebt ihn', async () => {
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('Ampel: viele Namen passen ohne Scrollen, auch im halben Fenster', async () => {
+  const kids = Array.from({ length: 32 }, (_, i) => `Maximilian ${i + 1}`);
+  const context = await browser.newContext({ viewport: { width: 960, height: 1080 } });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.waitForSelector('.kid-btn');
+  await page.evaluate((kids) => {
+    localStorage.setItem(
+      'gnb:v1',
+      JSON.stringify({ groups: [{ name: '4a', kids }], current: '4a', settings: { mode: 'ampel', animations: false } }),
+    );
+  }, kids);
+  await page.goto(`${base}?neu`);
+  await page.waitForSelector('.ampel-name');
+  const fits = () =>
+    page.$$eval('.ampel-box', (boxes) =>
+      boxes.every((b) => [...b.querySelectorAll('.ampel-name')].every((n) => n.offsetTop + n.offsetHeight <= b.clientHeight)),
+    );
+  const fontPx = () => page.$eval('.ampel-name', (n) => parseFloat(getComputedStyle(n).fontSize));
+  assert.ok(await fits(), 'Namen ragen aus dem grünen Kasten');
+  assert.ok((await fontPx()) < 27, 'Schrift wurde verkleinert');
+  // im großen Fenster wieder volle Größe
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector('.ampel-name')).fontSize) === 27);
+  assert.ok(await fits());
+  await context.close();
+});

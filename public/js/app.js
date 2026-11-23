@@ -420,7 +420,30 @@ function renderAmpel() {
     hint.textContent = 'Noch keine Kinder da. Im Menü auf „Gruppen bearbeiten“ tippen.';
     el.ampelBoxes.firstChild.firstChild.append(hint);
   }
+  fitAmpel();
   return nodes;
+}
+
+/**
+ * Schrift in der Ampel so groß wie möglich, aber so klein wie nötig:
+ * Alle Namen sollen ohne Scrollen in ihre Kästen passen.
+ */
+function fitAmpel() {
+  if (!isAmpel()) return;
+  const boxes = [...el.ampelBoxes.children];
+  const narrow = matchMedia('(max-width: 720px)').matches;
+  const setSize = (px) => el.ampelBoxes.style.setProperty('--ampel-font', `${px}px`);
+  let size = narrow ? 21 : 27;
+  setSize(size);
+  if (narrow) return; // auf dem Handy wird ohnehin gescrollt
+  const tooFull = () =>
+    boxes.some((box) => {
+      const last = box.querySelector('.ampel-names')?.lastElementChild;
+      if (!last) return false;
+      const pad = parseFloat(getComputedStyle(box).paddingBottom) || 0;
+      return last.offsetTop + last.offsetHeight + pad > box.clientHeight + 1;
+    });
+  while (size > 12 && tooFull()) setSize(--size);
 }
 
 function tapAmpelName(name, color) {
@@ -826,6 +849,12 @@ async function start() {
       if (!isAmpel()) renderStar();
     }, 60);
   }).observe(el.shape);
+  let at;
+  new ResizeObserver(() => {
+    clearTimeout(at);
+    at = setTimeout(fitAmpel, 60);
+  }).observe(el.ampelBoxes);
+  document.fonts?.ready.then(fitAmpel);
 }
 
 window.addEventListener('hashchange', async () => {

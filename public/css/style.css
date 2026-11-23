@@ -662,6 +662,7 @@ button {
   border: 3px solid transparent;
   cursor: pointer;
   transition: transform 0.15s, border-color 0.15s;
+  position: relative; /* Bezugspunkt fürs Messen der Namen */
 }
 .ampel-green { background: #c9efcb; border-color: #3bb54a; flex: 1.4; }
 .ampel-yellow { background: #fff3b8; border-color: #f2c200; }
@@ -685,8 +686,8 @@ button {
   border: 0;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.85);
-  padding: 8px 16px;
-  font-size: 1.7rem;
+  padding: 0.3em 0.6em;
+  font-size: var(--ampel-font, 27px);
   font-weight: 700;
   line-height: 1.1;
   box-shadow: 0 2px 6px rgba(43, 45, 66, 0.12);
@@ -743,9 +744,7 @@ button {
     flex: none;
     min-height: 110px;
   }
-  .ampel-name {
-    font-size: 1.3rem;
-  }
+
 }
 
 /* Ohne Animationen */
