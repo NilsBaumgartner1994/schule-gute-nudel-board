@@ -15,7 +15,10 @@ Tippt man einen Namen an, fliegt er in den Stern. Nochmal antippen nimmt ihn wie
 - Teilen per Link oder QR-Code: Der Link enthält alle Gruppen in kurzer, gepackter Form.
   So lässt sich alles am iPad vorbereiten und am Smartboard öffnen.
   Nach jeder Änderung steht der aktuelle Stand automatisch in der Adresszeile.
-- Menü oben links: Gruppen bearbeiten, Teilen, Stern leeren, Animationen an oder aus
+- Zweite Ansicht „Ampel“ (im Menü umschalten): Oben ein grüner Kasten mit allen Kindern,
+  darunter Gelb, Orange und Rot. Namen antippen, dann den Zielkasten antippen.
+  Nochmal auf den Namen tippen bricht ab. „Alle auf Grün“ setzt zurück.
+- Menü oben links: Stern oder Ampel wählen, Gruppen bearbeiten, Teilen, Stern leeren, Animationen an oder aus
 
 ## Für Entwickler
 

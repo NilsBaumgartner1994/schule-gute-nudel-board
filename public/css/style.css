@@ -572,6 +572,136 @@ button {
   transform: rotate(180deg);
 }
 
+/* ---------- Ansicht wählen (im Menü) ---------- */
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.mode-btn {
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--soft);
+  padding: 12px 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mode-btn:hover {
+  background: var(--soft-hover);
+}
+.mode-btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: #fff;
+  color: var(--accent);
+}
+.mode-btn > span:first-child {
+  color: #f4b400;
+}
+.mode-dots {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mode-dots i {
+  display: block;
+  width: 14px;
+  height: 5px;
+  border-radius: 3px;
+}
+.mode-dots i:nth-child(1) { background: #3bb54a; }
+.mode-dots i:nth-child(2) { background: #ffd23f; }
+.mode-dots i:nth-child(3) { background: #ff9233; }
+.mode-dots i:nth-child(4) { background: #e5383b; }
+
+/* ---------- Ampel ---------- */
+.mode-ampel .layout,
+.mode-ampel .layout.sidebar-closed {
+  grid-template-columns: 1fr;
+}
+.mode-ampel .stage,
+.mode-ampel .sidebar,
+.mode-ampel .group-title {
+  display: none;
+}
+
+.ampel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.ampel-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 60px; /* Platz für den Menü-Knopf */
+  min-height: 48px;
+}
+.ampel-bar .group-tabs {
+  flex: 1;
+}
+.ampel-boxes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ampel-box {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow);
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.ampel-green { background: #c9efcb; border-color: #3bb54a; flex: 1.4; }
+.ampel-yellow { background: #fff3b8; border-color: #f2c200; }
+.ampel-orange { background: #ffdcbc; border-color: #ff9233; }
+.ampel-red { background: #ffc9c9; border-color: #e5383b; }
+.ampel-boxes.choosing .ampel-box {
+  border-style: dashed;
+}
+.ampel-boxes.choosing .ampel-box:hover {
+  transform: scale(1.005);
+}
+
+.ampel-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  min-height: 100%;
+}
+.ampel-name {
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 8px 16px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  box-shadow: 0 2px 6px rgba(43, 45, 66, 0.12);
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.ampel-name:active {
+  transform: scale(0.97);
+}
+.ampel-name.selected {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 4px rgba(58, 134, 255, 0.35), 0 4px 12px rgba(43, 45, 66, 0.25);
+  transform: scale(1.08);
+}
+
 /* ---------- Schmale Bildschirme (Handy hochkant) ---------- */
 @media (max-width: 720px) {
   body {
@@ -607,6 +737,13 @@ button {
     overflow: visible;
   }
   .kid-btn {
+    font-size: 1.3rem;
+  }
+  .ampel-box {
+    flex: none;
+    min-height: 110px;
+  }
+  .ampel-name {
     font-size: 1.3rem;
   }
 }

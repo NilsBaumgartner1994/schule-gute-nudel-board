@@ -19,7 +19,9 @@ function defaultState() {
     groups: EXAMPLE,
     current: EXAMPLE[0].name,
     star: {}, // Gruppenname -> Namen im Stern
+    ampel: {}, // Gruppenname -> { Name: 'yellow' | 'orange' | 'red' } (fehlt = grün)
     settings: {
+      mode: 'star', // 'star' oder 'ampel'
       animations: !matchMedia('(prefers-reduced-motion: reduce)').matches,
       shape: 'star',
       sidebarOpen: true,
@@ -37,6 +39,7 @@ function loadState() {
         groups: normalizeGroups(s.groups || []),
         current: s.current ?? null,
         star: s.star && typeof s.star === 'object' ? s.star : {},
+        ampel: s.ampel && typeof s.ampel === 'object' ? s.ampel : {},
         settings: { ...d.settings, ...(s.settings || {}) },
         stored: true,
       };
@@ -49,8 +52,8 @@ function loadState() {
 
 function saveState() {
   try {
-    const { groups, current, star, settings } = state;
-    localStorage.setItem(STORE_KEY, JSON.stringify({ groups, current, star, settings }));
+    const { groups, current, star, ampel, settings } = state;
+    localStorage.setItem(STORE_KEY, JSON.stringify({ groups, current, star, ampel, settings }));
   } catch {
     /* ignorieren */
   }
@@ -94,6 +97,11 @@ const el = {
   layout: document.querySelector('.layout'),
   sidebarToggle: $('sidebarToggle'),
   sidebarBody: $('sidebarBody'),
+  ampel: $('ampel'),
+  ampelTabs: $('ampelTabs'),
+  ampelBoxes: $('ampelBoxes'),
+  ampelResetBtn: $('ampelResetBtn'),
+  menuClear: $('menuClear'),
 };
 
 // ---------- Hilfsfunktionen ----------
@@ -107,6 +115,7 @@ const starNames = () => {
   return list.filter((n) => g.kids.includes(n));
 };
 const animationsOn = () => state.settings.animations;
+const isAmpel = () => state.settings.mode === 'ampel';
 
 let toastTimer;
 function toast(msg) {
@@ -149,8 +158,8 @@ function renderShape() {
 }
 
 function renderTabs() {
-  el.groupTabs.replaceChildren(
-    ...state.groups.map((g) => {
+  const tabs = () =>
+    state.groups.map((g) => {
       const b = document.createElement('button');
       b.className = 'group-tab';
       b.type = 'button';
@@ -159,8 +168,10 @@ function renderTabs() {
       b.setAttribute('aria-selected', String(g.name === state.current));
       b.addEventListener('click', () => selectGroup(g.name));
       return b;
-    }),
-  );
+    });
+  // Die Gruppen-Knöpfe stehen je nach Ansicht rechts (Stern) oder oben (Ampel)
+  el.groupTabs.replaceChildren(...(isAmpel() ? [] : tabs()));
+  el.ampelTabs.replaceChildren(...(isAmpel() ? tabs() : []));
   const g = currentGroup();
   el.groupTitle.textContent = g ? g.name : '';
 }
@@ -238,11 +249,23 @@ function renderStar({ arriving } = {}) {
   return { nodes: result, fontPx: fontSize * px };
 }
 
+function renderMode() {
+  const ampel = isAmpel();
+  document.body.classList.toggle('mode-ampel', ampel);
+  el.ampel.hidden = !ampel;
+  for (const b of el.menu.querySelectorAll('[data-mode]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.mode === state.settings.mode));
+  }
+  el.menuClear.textContent = ampel ? 'Alle auf Grün' : 'Stern leeren';
+}
+
 function renderAll() {
+  renderMode();
   renderShape();
   renderTabs();
   renderList();
   renderStar();
+  renderAmpel();
   el.animToggle.checked = animationsOn();
   document.documentElement.classList.toggle('no-anim', !animationsOn());
 }
@@ -251,9 +274,21 @@ function renderAll() {
 
 function selectGroup(name) {
   state.current = name;
+  ampelSelected = null;
   saveState();
   renderTabs();
   renderList();
+  renderStar();
+  renderAmpel();
+}
+
+function setMode(mode) {
+  state.settings.mode = mode === 'ampel' ? 'ampel' : 'star';
+  ampelSelected = null;
+  saveState();
+  renderMode();
+  renderTabs();
+  renderAmpel();
   renderStar();
 }
 
@@ -309,6 +344,136 @@ function clearStar() {
   saveState();
   renderList();
   renderStar();
+}
+
+// ---------- Ampel ----------
+
+const AMPEL = [
+  { color: 'green', label: 'Grün' },
+  { color: 'yellow', label: 'Gelb' },
+  { color: 'orange', label: 'Orange' },
+  { color: 'red', label: 'Rot' },
+];
+let ampelSelected = null; // angetippter Name, der gleich verschoben wird
+
+function ampelMap() {
+  const g = currentGroup();
+  if (!g) return {};
+  const map = state.ampel[g.name] || {};
+  // nur Namen, die es noch gibt, und nur gültige Farben
+  const clean = {};
+  for (const [name, color] of Object.entries(map)) {
+    if (g.kids.includes(name) && AMPEL.some((a) => a.color === color && color !== 'green')) clean[name] = color;
+  }
+  return clean;
+}
+
+/** Namen je Farbe. Grün behält die Reihenfolge der Gruppe, die anderen die Reihenfolge des Hineinlegens. */
+function ampelColumns() {
+  const g = currentGroup();
+  const map = ampelMap();
+  const cols = { green: [], yellow: [], orange: [], red: [] };
+  for (const name of g ? g.kids : []) if (!map[name]) cols.green.push(name);
+  for (const [name, color] of Object.entries(map)) cols[color].push(name);
+  return cols;
+}
+
+function renderAmpel() {
+  if (!isAmpel()) {
+    el.ampelBoxes.replaceChildren();
+    return new Map();
+  }
+  const cols = ampelColumns();
+  const nodes = new Map();
+  el.ampelBoxes.classList.toggle('choosing', !!ampelSelected);
+  el.ampelBoxes.replaceChildren(
+    ...AMPEL.map(({ color, label }) => {
+      const box = document.createElement('div');
+      box.className = `ampel-box ampel-${color}`;
+      box.dataset.color = color;
+      box.setAttribute('role', 'button');
+      box.setAttribute('aria-label', `${label}: hierher verschieben`);
+      box.addEventListener('click', () => moveSelectedTo(color));
+      const list = document.createElement('div');
+      list.className = 'ampel-names';
+      for (const name of cols[color]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ampel-name' + (name === ampelSelected ? ' selected' : '');
+        b.dataset.name = name;
+        b.textContent = name;
+        b.setAttribute('aria-pressed', String(name === ampelSelected));
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          tapAmpelName(name, color);
+        });
+        list.append(b);
+        nodes.set(name, b);
+      }
+      box.append(list);
+      return box;
+    }),
+  );
+  if (!state.groups.length || !currentGroup()?.kids.length) {
+    const hint = document.createElement('p');
+    hint.className = 'empty-hint';
+    hint.textContent = 'Noch keine Kinder da. Im Menü auf „Gruppen bearbeiten“ tippen.';
+    el.ampelBoxes.firstChild.firstChild.append(hint);
+  }
+  return nodes;
+}
+
+function tapAmpelName(name, color) {
+  if (ampelSelected === name) {
+    ampelSelected = null; // nochmal antippen: abwählen
+  } else if (ampelSelected && ampelColor(ampelSelected) !== color) {
+    moveSelectedTo(color); // Name in einem anderen Kasten angetippt: dorthin verschieben
+    return;
+  } else {
+    ampelSelected = name;
+  }
+  renderAmpel();
+}
+
+const ampelColor = (name) => ampelMap()[name] || 'green';
+
+function moveSelectedTo(color) {
+  const g = currentGroup();
+  const name = ampelSelected;
+  if (!g || !name) return;
+  ampelSelected = null;
+  if (ampelColor(name) === color) {
+    renderAmpel();
+    return;
+  }
+  const oldNode = el.ampelBoxes.querySelector(`.ampel-name[data-name="${CSS.escape(name)}"]`);
+  const from = oldNode?.getBoundingClientRect();
+  const map = ampelMap();
+  delete map[name]; // neu einfügen, damit der Name hinten ankommt
+  if (color !== 'green') map[name] = color;
+  state.ampel[g.name] = map;
+  saveState();
+  const nodes = renderAmpel();
+  const node = nodes.get(name);
+  if (node && from && animationsOn()) {
+    const to = node.getBoundingClientRect();
+    node.animate(
+      [
+        { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(1.15)` },
+        { transform: 'translate(0, 0) scale(1)' },
+      ],
+      { duration: 450, easing: 'cubic-bezier(.3,.7,.3,1)' },
+    );
+  }
+}
+
+function resetAmpel() {
+  const g = currentGroup();
+  if (!g) return;
+  state.ampel[g.name] = {};
+  ampelSelected = null;
+  saveState();
+  renderAmpel();
 }
 
 // ---------- Animationen ----------
@@ -414,14 +579,24 @@ el.menuClose.addEventListener('click', closeMenu);
 el.menuBackdrop.addEventListener('click', closeMenu);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !el.menu.hidden) closeMenu();
+  else if (e.key === 'Escape' && ampelSelected) {
+    ampelSelected = null;
+    renderAmpel();
+  }
 });
 el.menu.addEventListener('click', (e) => {
+  const mode = e.target.closest('[data-mode]')?.dataset.mode;
+  if (mode) {
+    setMode(mode);
+    closeMenu();
+    return;
+  }
   const action = e.target.closest('[data-action]')?.dataset.action;
   if (!action) return;
   closeMenu();
   if (action === 'edit') openEditor();
   if (action === 'share') openShare();
-  if (action === 'clear') clearStar();
+  if (action === 'clear') (isAmpel() ? resetAmpel : clearStar)();
 });
 el.animToggle.addEventListener('change', () => {
   state.settings.animations = el.animToggle.checked;
@@ -447,6 +622,7 @@ el.sidebarToggle.addEventListener('click', () => {
   saveState();
 });
 applySidebar();
+el.ampelResetBtn.addEventListener('click', resetAmpel);
 el.editBtn.addEventListener('click', openEditor);
 
 // ---------- Gruppen bearbeiten ----------
@@ -532,20 +708,24 @@ function commitDraft() {
   const groups = normalizeGroups(draft.map((g) => ({ name: g.name, kids: g.kids.split('\n') })));
   // Sternzustand bei Umbenennung mitnehmen
   const star = {};
+  const ampel = {};
   draft.forEach((g, i) => {
     const newName = groups[i].name;
     if (g.orig && state.star[g.orig]) star[newName] = state.star[g.orig];
+    if (g.orig && state.ampel[g.orig]) ampel[newName] = state.ampel[g.orig];
     g.orig = newName;
   });
   const currentIdx = draftIndex;
   state.groups = groups;
   state.star = star;
+  state.ampel = ampel;
   state.current = groups[currentIdx]?.name ?? groups[0]?.name ?? null;
   saveState();
   updateHash();
   renderTabs();
   renderList();
   renderStar();
+  renderAmpel();
 }
 
 // ---------- Teilen ----------
@@ -615,9 +795,14 @@ async function importFromHash() {
   }
   if (take) {
     const star = {};
-    for (const g of groups) if (state.star[g.name]) star[g.name] = state.star[g.name];
+    const ampel = {};
+    for (const g of groups) {
+      if (state.star[g.name]) star[g.name] = state.star[g.name];
+      if (state.ampel[g.name]) ampel[g.name] = state.ampel[g.name];
+    }
     state.groups = groups;
     state.star = star;
+    state.ampel = ampel;
     if (!groups.some((g) => g.name === state.current)) state.current = groups[0]?.name ?? null;
     saveState();
     toast('Gruppen übernommen');
@@ -637,7 +822,9 @@ async function start() {
   let rt;
   new ResizeObserver(() => {
     clearTimeout(rt);
-    rt = setTimeout(() => renderStar(), 60);
+    rt = setTimeout(() => {
+      if (!isAmpel()) renderStar();
+    }, 60);
   }).observe(el.shape);
 }
 

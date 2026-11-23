@@ -135,3 +135,57 @@ test('Namensleiste lässt sich ein- und aufklappen und bleibt so', async () => {
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('Ampel: Name antippen, dann Farbe antippen verschiebt ihn', async () => {
+  const { context, page, errors } = await freshPage();
+  const inBox = (color) =>
+    page.$$eval(`.ampel-${color} .ampel-name`, (n) => n.map((x) => x.dataset.name));
+
+  await page.click('#menuBtn');
+  await page.click('[data-mode="ampel"]');
+  assert.ok(await page.isVisible('#ampel'));
+  assert.ok(!(await page.isVisible('#shape')));
+  assert.equal((await inBox('green')).length, 12);
+
+  // Anna nach Gelb
+  await page.click('.ampel-name[data-name="Anna"]');
+  assert.equal(await page.locator('.ampel-name.selected').count(), 1);
+  await page.click('.ampel-yellow');
+  assert.deepEqual(await inBox('yellow'), ['Anna']);
+  assert.ok(!(await inBox('green')).includes('Anna'));
+  assert.equal(await page.locator('.ampel-name.selected').count(), 0);
+
+  // Ben nach Rot, dann Anna nach Rot (durch Antippen eines Namens im roten Kasten)
+  await page.click('.ampel-name[data-name="Ben"]');
+  await page.click('.ampel-red');
+  await page.click('.ampel-name[data-name="Anna"]');
+  await page.click('.ampel-name[data-name="Ben"]');
+  assert.deepEqual(await inBox('red'), ['Ben', 'Anna']);
+  assert.deepEqual(await inBox('yellow'), []);
+
+  // nochmal antippen wählt ab
+  await page.click('.ampel-name[data-name="Can"]');
+  await page.click('.ampel-name[data-name="Can"]');
+  assert.equal(await page.locator('.ampel-name.selected').count(), 0);
+
+  // bleibt nach Neuladen, inklusive Ansicht
+  await page.reload();
+  await page.waitForSelector('.ampel-name');
+  assert.deepEqual(await inBox('red'), ['Ben', 'Anna']);
+
+  // zurück nach Grün in alter Reihenfolge
+  await page.click('.ampel-name[data-name="Anna"]');
+  await page.click('.ampel-green');
+  assert.deepEqual((await inBox('green')).slice(0, 2), ['Anna', 'Can']);
+
+  await page.click('#ampelResetBtn');
+  assert.equal((await inBox('green')).length, 12);
+
+  // zurück zum Stern
+  await page.click('#menuBtn');
+  await page.click('[data-mode="star"]');
+  assert.ok(await page.isVisible('#shape'));
+  assert.ok(!(await page.isVisible('#ampel')));
+  assert.deepEqual(errors, []);
+  await context.close();
+});

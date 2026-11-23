@@ -2,7 +2,7 @@
 // Strategie "erst Netz, dann Speicher": Ist Internet da, kommt immer die neueste
 // Version (und der Speicher wird aufgefrischt). Ohne Internet oder bei sehr
 // langsamem Netz kommt die gespeicherte Version. So braucht es keinen Build-Schritt.
-const CACHE = 'gnb-v2';
+const CACHE = 'gnb-v3';
 const NET_TIMEOUT = 3000;
 
 const FILES = [

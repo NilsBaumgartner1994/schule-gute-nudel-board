@@ -54,6 +54,15 @@
         </div>
         </div>
       </aside>
+
+      <!-- Ampel: Namen antippen, dann Farbe antippen -->
+      <section id="ampel" class="ampel" aria-label="Ampel" hidden>
+        <div class="ampel-bar">
+          <div class="group-tabs" id="ampelTabs" role="tablist" aria-label="Gruppen"></div>
+          <button id="ampelResetBtn" class="btn btn-soft">Alle auf Grün</button>
+        </div>
+        <div id="ampelBoxes" class="ampel-boxes"></div>
+      </section>
     </main>
 
     <!-- Burger-Menü -->
@@ -65,9 +74,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
+      <div class="mode-switch" role="group" aria-label="Ansicht">
+        <button class="mode-btn" data-mode="star" aria-pressed="true"><span aria-hidden="true">★</span> Stern</button>
+        <button class="mode-btn" data-mode="ampel" aria-pressed="false"><span class="mode-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span> Ampel</button>
+      </div>
       <button class="menu-item" data-action="edit">Gruppen bearbeiten</button>
       <button class="menu-item" data-action="share">Teilen (Link und QR-Code)</button>
-      <button class="menu-item" data-action="clear">Stern leeren</button>
+      <button class="menu-item" data-action="clear" id="menuClear">Stern leeren</button>
       <label class="menu-item toggle">
         <span>Animationen</span>
         <input id="animToggle" type="checkbox" role="switch" />
