@@ -116,7 +116,12 @@
     <dialog id="shareDialog" class="dialog">
       <form method="dialog" class="dialog-inner">
         <h2>Teilen</h2>
-        <p class="muted">Mit diesem Link oder QR-Code öffnest du die Seite mit allen Gruppen auf einem anderen Gerät. Der Link enthält die Namen der Kinder, also bitte nur an Kolleginnen und Kollegen weitergeben.</p>
+        <div class="mode-switch share-switch" role="group" aria-label="Was soll im Link stehen?">
+          <button type="button" class="mode-btn" data-share="with" aria-pressed="true">Mit Namen</button>
+          <button type="button" class="mode-btn" data-share="without" aria-pressed="false">Ohne Namen</button>
+        </div>
+        <p class="muted" id="shareWithText">Mit diesem Link oder QR-Code öffnest du die Seite genau so wie jetzt, mit allen Gruppen und Namen. Bitte nur an Kolleginnen und Kollegen weitergeben.</p>
+        <p class="muted" id="shareWithoutText" hidden>Dieser Link öffnet die leere Seite mit Beispielnamen. Die Namen deiner Kinder stehen nicht darin.</p>
         <div id="qrBox" class="qr-box"></div>
         <label class="field">
           <span>Link</span>
@@ -131,17 +136,6 @@
     </dialog>
 
     <!-- Rückfrage beim Öffnen eines Links -->
-    <dialog id="importDialog" class="dialog">
-      <form method="dialog" class="dialog-inner">
-        <h2>Gruppen aus dem Link übernehmen?</h2>
-        <p class="muted" id="importText"></p>
-        <div class="dialog-actions">
-          <button class="btn btn-soft" value="keep">Meine behalten</button>
-          <button class="btn btn-primary" value="import">Übernehmen</button>
-        </div>
-      </form>
-    </dialog>
-
     <div id="toast" class="toast" role="status" hidden></div>
 
     <script type="module" src="js/app.js"></script>

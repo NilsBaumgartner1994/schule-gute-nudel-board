@@ -47,3 +47,38 @@ test('groupsEqual vergleicht inhaltlich', () => {
   assert.ok(groupsEqual(sample, structuredClone(sample)));
   assert.ok(!groupsEqual(sample, [sample[0]]));
 });
+
+test('Ganzer Stand (Stern, Ampel, Einstellungen) übersteht Hin- und Rückweg', async () => {
+  const { encodeState, decodeState } = await import('../public/js/codec.js');
+  const state = {
+    groups: sample,
+    current: 'Gruppe 2',
+    star: { 'Klasse 1a': ['Ben', 'Zoë'], 'Gruppe 2': [] },
+    ampel: { 'Klasse 1a': { Anna: 'red', Çelik: 'yellow' } },
+    settings: { mode: 'ampel', shape: 'star', animations: false, sidebarOpen: true },
+  };
+  const code = await encodeState(state);
+  assert.match(code, /^2[zp][A-Za-z0-9_-]+$/);
+  assert.deepEqual(await decodeState(code), { ...state, star: { 'Klasse 1a': ['Ben', 'Zoë'] } });
+});
+
+test('Alte Links (nur Gruppen) werden weiter gelesen', async () => {
+  const { decodeState } = await import('../public/js/codec.js');
+  const s = await decodeState(await encodeGroups(sample));
+  assert.deepEqual(s.groups, sample);
+  assert.deepEqual(s.star, {});
+});
+
+test('Unbekannte Namen und Farben im Link werden ignoriert', async () => {
+  const { encodeState, decodeState } = await import('../public/js/codec.js');
+  const code = await encodeState({
+    groups: sample,
+    current: 'Gibt es nicht',
+    star: { 'Klasse 1a': ['Anna', 'Fremd'], Fremd: ['X'] },
+    ampel: { 'Klasse 1a': { Ben: 'lila', Ole: 'red' } },
+  });
+  const s = await decodeState(code);
+  assert.equal(s.current, null);
+  assert.deepEqual(s.star, { 'Klasse 1a': ['Anna'] });
+  assert.deepEqual(s.ampel, { 'Klasse 1a': {} });
+});

@@ -1,10 +1,14 @@
-import { encodeGroups, decodeGroups, readCodeFromHash, groupsEqual, normalizeGroups, HASH_KEY } from './codec.js';
+import { encodeState, decodeState, readCodeFromHash, normalizeGroups, HASH_KEY } from './codec.js';
 import { SHAPES, roundedPolygonPath, layoutNames } from './shapes.js';
 import qrcode from '../vendor/qrcode.mjs';
 
-// ---------- Speicher (nur lokal auf dem Gerät) ----------
+// ---------- Speicher ----------
+//
+// Auf dem Gerät wird nichts gespeichert. Der ganze Stand (Gruppen, Stern,
+// Ampel, Einstellungen) steht nur in der Adresse (URL) hinter dem "#".
+// Jede Änderung schreibt die Adresse sofort neu.
 
-const STORE_KEY = 'gnb:v1';
+const OLD_STORE_KEY = 'gnb:v1'; // früher: Speicher auf dem Gerät
 
 const EXAMPLE = [
   {
@@ -14,52 +18,52 @@ const EXAMPLE = [
   { name: 'Gruppe 2', kids: ['Noah', 'Ole', 'Paula', 'Quentin', 'Rosa', 'Sami'] },
 ];
 
-function defaultState() {
+function defaultSettings() {
   return {
-    groups: EXAMPLE,
-    current: EXAMPLE[0].name,
-    star: {}, // Gruppenname -> Namen im Stern
-    ampel: {}, // Gruppenname -> { Name: 'yellow' | 'orange' | 'red' } (fehlt = grün)
-    settings: {
-      mode: 'star', // 'star' oder 'ampel'
-      animations: !matchMedia('(prefers-reduced-motion: reduce)').matches,
-      shape: 'star',
-      sidebarOpen: true,
-    },
+    mode: 'star', // 'star' oder 'ampel'
+    animations: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+    shape: 'star',
+    sidebarOpen: true,
   };
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) {
-      const s = JSON.parse(raw);
-      const d = defaultState();
-      return {
-        groups: normalizeGroups(s.groups || []),
-        current: s.current ?? null,
-        star: s.star && typeof s.star === 'object' ? s.star : {},
-        ampel: s.ampel && typeof s.ampel === 'object' ? s.ampel : {},
-        settings: { ...d.settings, ...(s.settings || {}) },
-        stored: true,
-      };
-    }
-  } catch {
-    /* privater Modus o. ä. */
-  }
-  return { ...defaultState(), stored: false };
+function defaultState() {
+  return {
+    groups: structuredClone(EXAMPLE),
+    current: EXAMPLE[0].name,
+    star: {}, // Gruppenname -> Namen im Stern
+    ampel: {}, // Gruppenname -> { Name: 'yellow' | 'orange' | 'red' } (fehlt = grün)
+    settings: defaultSettings(),
+  };
 }
 
+/** Übernimmt einen (dekodierten) Stand in state. */
+function applyState(s) {
+  state.groups = normalizeGroups(s.groups || []);
+  state.current = s.current ?? null;
+  state.star = s.star && typeof s.star === 'object' ? s.star : {};
+  state.ampel = s.ampel && typeof s.ampel === 'object' ? s.ampel : {};
+  state.settings = { ...defaultSettings(), ...(s.settings || {}) };
+  if (!state.groups.some((g) => g.name === state.current)) state.current = state.groups[0]?.name ?? null;
+}
+
+/** Alte, auf dem Gerät gespeicherte Daten einmalig holen und vom Gerät löschen. */
+function takeOldDeviceData() {
+  try {
+    const raw = localStorage.getItem(OLD_STORE_KEY);
+    localStorage.removeItem(OLD_STORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Änderung merken = Adresse neu schreiben */
 function saveState() {
-  try {
-    const { groups, current, star, ampel, settings } = state;
-    localStorage.setItem(STORE_KEY, JSON.stringify({ groups, current, star, ampel, settings }));
-  } catch {
-    /* ignorieren */
-  }
+  updateHash();
 }
 
-const state = loadState();
+const state = defaultState();
 
 // ---------- DOM ----------
 
@@ -89,8 +93,8 @@ const el = {
   shareLink: $('shareLink'),
   copyLinkBtn: $('copyLinkBtn'),
   nativeShareBtn: $('nativeShareBtn'),
-  importDialog: $('importDialog'),
-  importText: $('importText'),
+  shareWithText: $('shareWithText'),
+  shareWithoutText: $('shareWithoutText'),
   clearBtn: $('clearBtn'),
   editBtn: $('editBtn'),
   toast: $('toast'),
@@ -135,19 +139,28 @@ function measure(name) {
 // ---------- URL (Hash) aktuell halten ----------
 
 let hashWrite = Promise.resolve();
+let lastCode = null; // zuletzt selbst geschriebener Code
 function updateHash() {
-  hashWrite = hashWrite.then(async () => {
-    const code = await encodeGroups(state.groups);
-    const url = new URL(location.href);
-    url.hash = `${HASH_KEY}=${code}`;
-    history.replaceState(null, '', url);
-  });
+  hashWrite = hashWrite
+    .then(async () => {
+      const code = await encodeState(state);
+      if (code === lastCode && readCodeFromHash(location.hash) === code) return;
+      lastCode = code;
+      const url = new URL(location.href);
+      url.hash = `${HASH_KEY}=${code}`;
+      history.replaceState(null, '', url);
+    })
+    .catch(() => {});
   return hashWrite;
 }
 
-async function shareUrl() {
+/** Link mit allen Daten bzw. ganz ohne Daten */
+async function shareUrl(withData) {
   await updateHash();
-  return location.href;
+  if (withData) return location.href;
+  const url = new URL(location.href);
+  url.hash = '';
+  return url.href.replace(/#$/, '');
 }
 
 // ---------- Rendern ----------
@@ -268,6 +281,7 @@ function renderAll() {
   renderAmpel();
   el.animToggle.checked = animationsOn();
   document.documentElement.classList.toggle('no-anim', !animationsOn());
+  applySidebar();
 }
 
 // ---------- Aktionen ----------
@@ -744,7 +758,6 @@ function commitDraft() {
   state.ampel = ampel;
   state.current = groups[currentIdx]?.name ?? groups[0]?.name ?? null;
   saveState();
-  updateHash();
   renderTabs();
   renderList();
   renderStar();
@@ -753,8 +766,21 @@ function commitDraft() {
 
 // ---------- Teilen ----------
 
+let shareWithData = true;
+
 async function openShare() {
-  const url = await shareUrl();
+  await showShareLink();
+  el.nativeShareBtn.hidden = !navigator.share;
+  el.shareDialog.showModal();
+}
+
+async function showShareLink() {
+  for (const b of el.shareDialog.querySelectorAll('[data-share]')) {
+    b.setAttribute('aria-pressed', String((b.dataset.share === 'with') === shareWithData));
+  }
+  el.shareWithText.hidden = !shareWithData;
+  el.shareWithoutText.hidden = shareWithData;
+  const url = await shareUrl(shareWithData);
   el.shareLink.value = url;
   el.qrBox.replaceChildren();
   try {
@@ -769,9 +795,14 @@ async function openShare() {
     p.textContent = 'Zu viele Namen für einen QR-Code. Bitte den Link kopieren.';
     el.qrBox.append(p);
   }
-  el.nativeShareBtn.hidden = !navigator.share;
-  el.shareDialog.showModal();
 }
+
+el.shareDialog.addEventListener('click', (e) => {
+  const choice = e.target.closest('[data-share]')?.dataset.share;
+  if (!choice) return;
+  shareWithData = choice === 'with';
+  showShareLink();
+});
 
 el.copyLinkBtn.addEventListener('click', async () => {
   const url = el.shareLink.value;
@@ -788,56 +819,31 @@ el.nativeShareBtn.addEventListener('click', () => {
   navigator.share({ title: 'Gute-Nudel-Board', url: el.shareLink.value }).catch(() => {});
 });
 
-// ---------- Link beim Start übernehmen ----------
+// ---------- Stand aus der Adresse lesen ----------
 
-function ask(dialog) {
-  return new Promise((resolve) => {
-    dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true });
-    dialog.showModal();
-  });
-}
-
-async function importFromHash() {
+/** Liest den Stand aus der Adresse. Gibt false zurück, wenn dort keiner steht. */
+async function loadFromHash() {
   const code = readCodeFromHash(location.hash);
-  if (!code) return;
-  let groups;
+  if (!code) return false;
   try {
-    groups = await decodeGroups(code);
+    applyState(await decodeState(code));
+    lastCode = code;
   } catch (err) {
     toast(err.message || 'Der Link konnte nicht gelesen werden.');
-    return;
+    return false;
   }
-  if (groupsEqual(groups, state.groups)) return;
-  let take = true;
-  if (state.stored && state.groups.length) {
-    const kids = groups.reduce((n, g) => n + g.kids.length, 0);
-    el.importText.textContent =
-      `Der Link enthält ${groups.length} ${groups.length === 1 ? 'Gruppe' : 'Gruppen'} mit ${kids} Kindern ` +
-      `(${groups.map((g) => g.name).join(', ')}). Deine bisherigen Gruppen auf diesem Gerät werden dabei ersetzt.`;
-    take = (await ask(el.importDialog)) === 'import';
-  }
-  if (take) {
-    const star = {};
-    const ampel = {};
-    for (const g of groups) {
-      if (state.star[g.name]) star[g.name] = state.star[g.name];
-      if (state.ampel[g.name]) ampel[g.name] = state.ampel[g.name];
-    }
-    state.groups = groups;
-    state.star = star;
-    state.ampel = ampel;
-    if (!groups.some((g) => g.name === state.current)) state.current = groups[0]?.name ?? null;
-    saveState();
-    toast('Gruppen übernommen');
-  }
+  return true;
 }
 
 // ---------- Start ----------
 
 async function start() {
-  await importFromHash();
-  if (!state.groups.some((g) => g.name === state.current)) state.current = state.groups[0]?.name ?? null;
-  saveState();
+  const old = takeOldDeviceData();
+  if (!(await loadFromHash())) {
+    // Keine Daten in der Adresse: alte Gerätedaten (falls vorhanden) übernehmen, sonst Beispiel
+    if (old?.groups?.length) applyState(old);
+    else applyState(defaultState());
+  }
   renderAll();
   updateHash();
   // Nach dem Laden der Schrift neu messen
@@ -857,9 +863,12 @@ async function start() {
   document.fonts?.ready.then(fitAmpel);
 }
 
+// Adresse von Hand geändert oder neuen Link eingefügt
 window.addEventListener('hashchange', async () => {
-  await importFromHash();
+  if (readCodeFromHash(location.hash) === lastCode) return;
+  if (!(await loadFromHash())) applyState(defaultState());
   renderAll();
+  updateHash();
 });
 
 start();

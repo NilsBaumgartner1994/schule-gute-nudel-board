@@ -32,8 +32,10 @@ Deshalb gilt hier ein bewusst einfacher Ablauf.
 ## Grundsätze
 
 - Alles bleibt offline nutzbar. Keine externen Server, CDNs oder Tracker einbinden.
-- Daten nur lokal (localStorage). Teilen geschieht ausschließlich über den Link im URL-Hash.
-- Der Inhalt des Sterns wird absichtlich nicht in den Link geschrieben, nur die Gruppen.
+- Auf dem Gerät wird nichts gespeichert (kein localStorage). Der ganze Stand (Gruppen, Stern,
+  Ampel, Einstellungen) steht nur im URL-Hash und wird bei jeder Änderung neu geschrieben
+  (`history.replaceState`). Alte localStorage-Daten werden beim Start einmal übernommen und gelöscht.
+- Teilen: Link „mit Namen“ (aktuelle Adresse) oder „ohne Namen“ (Adresse ohne Hash, zeigt Beispiel).
 - Oberfläche schlicht halten, große Schaltflächen, Texte auf Deutsch.
-- Das Link-Format ist versioniert (`1z…`). Bei Änderungen am Format eine neue Version einführen
+- Das Link-Format ist versioniert (`1z…` nur Gruppen, `2z…` ganzer Stand). Bei Änderungen am Format eine neue Version einführen
   und alte Links weiter lesen können.

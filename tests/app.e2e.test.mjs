@@ -72,7 +72,7 @@ test('Gruppen bearbeiten, Link teilen und auf anderem Gerät öffnen', async () 
   await page.click('[data-action="share"]');
   await page.waitForSelector('#qrBox svg');
   const link = await page.inputValue('#shareLink');
-  assert.match(link, /#g=1z/);
+  assert.match(link, /#g=2z/);
   await context.close();
 
   // "anderes Gerät": neuer Kontext ohne gespeicherte Daten
@@ -124,7 +124,9 @@ test('Namensleiste lässt sich ein- und aufklappen und bleibt so', async () => {
   const { context, page, errors } = await freshPage();
   const starWidth = () => page.$eval('.stage', (n) => n.clientWidth);
   const before = await starWidth();
+  const hash = await page.evaluate(() => location.hash);
   await page.click('#sidebarToggle');
+  await page.waitForFunction((h) => location.hash !== h, hash);
   assert.equal(await page.isVisible('.kid-btn'), false);
   await page.waitForFunction((w) => document.querySelector('.stage').clientWidth > w, before);
   await page.reload();
@@ -215,5 +217,63 @@ test('Ampel: viele Namen passen ohne Scrollen, auch im halben Fenster', async ()
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector('.ampel-name')).fontSize) === 27);
   assert.ok(await fits());
+  await context.close();
+});
+
+test('Nichts wird auf dem Gerät gespeichert, alles steht im Link', async () => {
+  const { context, page, errors } = await freshPage();
+  await page.click('.kid-btn[data-name="Anna"]');
+  await page.waitForFunction(() => location.hash.startsWith('#g=2'));
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => localStorage.length), 0);
+  const url = page.url();
+
+  // gleicher Link in einem neuen Browser zeigt genau denselben Stand
+  const other = await freshPage(url);
+  await other.page.waitForSelector('.star-name');
+  assert.deepEqual(await starNames(other.page), ['Anna']);
+  await other.context.close();
+
+  // Seite ohne Daten im Link: Beispiel, nicht der Stand von eben
+  await page.goto(base + '?leer');
+  await page.waitForSelector('.kid-btn');
+  assert.deepEqual(await starNames(page), []);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('Teilen: Link mit oder ohne Namen', async () => {
+  const { context, page } = await freshPage();
+  await page.click('#editBtn');
+  await page.fill('#kidsInput', 'Geheim Eins\nGeheim Zwei');
+  await page.click('#editDialog button[value="done"]');
+  await page.click('#menuBtn');
+  await page.click('[data-action="share"]');
+  await page.waitForSelector('#qrBox svg');
+  const withLink = await page.inputValue('#shareLink');
+  assert.match(withLink, /#g=2z/);
+  await page.click('[data-share="without"]');
+  await page.waitForFunction(() => !document.getElementById('shareLink').value.includes('#'));
+  const withoutLink = await page.inputValue('#shareLink');
+  assert.ok(!withoutLink.includes('#'));
+  await context.close();
+
+  const a = await freshPage(withLink);
+  assert.deepEqual(await a.page.$$eval('.kid-btn', (n) => n.map((x) => x.dataset.name)), ['Geheim Eins', 'Geheim Zwei']);
+  await a.context.close();
+  const b = await freshPage(withoutLink);
+  assert.ok(!(await b.page.$$eval('.kid-btn', (n) => n.map((x) => x.dataset.name))).includes('Geheim Eins'));
+  await b.context.close();
+});
+
+test('Alte Daten vom Gerät werden einmal übernommen und dort gelöscht', async () => {
+  const { context, page } = await freshPage();
+  await page.evaluate(() =>
+    localStorage.setItem('gnb:v1', JSON.stringify({ groups: [{ name: 'Alt', kids: ['Xaver'] }], current: 'Alt' })),
+  );
+  await page.goto(base + '?alt');
+  await page.waitForSelector('.kid-btn[data-name="Xaver"]');
+  await page.waitForFunction(() => location.hash.startsWith('#g=2'));
+  assert.equal(await page.evaluate(() => localStorage.getItem('gnb:v1')), null);
   await context.close();
 });

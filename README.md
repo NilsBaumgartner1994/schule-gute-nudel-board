@@ -11,8 +11,10 @@ Tippt man einen Namen an, fliegt er in den Stern. Nochmal antippen nimmt ihn wie
 - Beliebig viele Kinder pro Gruppe, die Schrift im Stern passt sich automatisch an
 - Grundschulschrift ABeeZee (freie Web-Version von ABeZeh); ist ABeZeh auf dem Gerät installiert, wird diese genutzt
 - Funktioniert offline. Nach dem ersten Aufruf auch ohne Internet, z. B. als App auf dem Home-Bildschirm des iPads
-- Alle Daten bleiben nur auf dem Gerät
-- Teilen per Link oder QR-Code: Der Link enthält alle Gruppen in kurzer, gepackter Form.
+- Nichts wird auf dem Gerät gespeichert: Alle Daten (Gruppen, Stern, Ampel, Einstellungen) stehen
+  nur im Link und der Link ändert sich bei jeder Änderung automatisch mit.
+- Teilen per Link oder QR-Code, wahlweise mit Namen (genau der aktuelle Stand) oder ohne Namen
+  (leere Seite mit Beispielnamen).
   So lässt sich alles am iPad vorbereiten und am Smartboard öffnen.
   Nach jeder Änderung steht der aktuelle Stand automatisch in der Adresszeile.
 - Zweite Ansicht „Ampel“ (im Menü umschalten): Oben ein grüner Kasten mit allen Kindern,
