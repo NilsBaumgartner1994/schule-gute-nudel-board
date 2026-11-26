@@ -445,11 +445,9 @@ function renderAmpel() {
 function fitAmpel() {
   if (!isAmpel()) return;
   const boxes = [...el.ampelBoxes.children];
-  const narrow = matchMedia('(max-width: 720px)').matches;
   const setSize = (px) => el.ampelBoxes.style.setProperty('--ampel-font', `${px}px`);
-  let size = narrow ? 21 : 27;
+  let size = 27;
   setSize(size);
-  if (narrow) return; // auf dem Handy wird ohnehin gescrollt
   const tooFull = () =>
     boxes.some((box) => {
       const last = box.querySelector('.ampel-names')?.lastElementChild;
@@ -457,7 +455,7 @@ function fitAmpel() {
       const pad = parseFloat(getComputedStyle(box).paddingBottom) || 0;
       return last.offsetTop + last.offsetHeight + pad > box.clientHeight + 1;
     });
-  while (size > 12 && tooFull()) setSize(--size);
+  while (size > 10 && tooFull()) setSize(--size);
 }
 
 function tapAmpelName(name, color) {

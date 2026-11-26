@@ -740,9 +740,16 @@ button {
   .kid-btn {
     font-size: 1.3rem;
   }
-  .ampel-box {
-    flex: none;
-    min-height: 110px;
+  /* Die Ampel passt immer auf einen Bildschirm, auch im schmalen Fenster */
+  body.mode-ampel {
+    overflow: hidden;
+  }
+  .mode-ampel .layout,
+  .mode-ampel .layout.sidebar-closed {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: 1fr;
+    padding-top: max(12px, env(safe-area-inset-top));
   }
 
 }

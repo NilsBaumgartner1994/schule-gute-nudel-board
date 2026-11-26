@@ -277,3 +277,29 @@ test('Alte Daten vom Gerät werden einmal übernommen und dort gelöscht', async
   assert.equal(await page.evaluate(() => localStorage.getItem('gnb:v1')), null);
   await context.close();
 });
+
+test('Ampel passt auch im schmalen Fenster ohne Scrollen auf den Bildschirm', async () => {
+  const kids = ['Pia','Bennett','Laura C.','Laura G.','Lina','Holly','Mimi','Viktor','Maria M.','Jonas','Noah','Mia','Raphael','Dilin','Kuba','Benedikt','Maria S.','Vadim','Alina','Jamiro','Jayda','Emanuel','Paul','Maximilian','Elisabeth','Charlotte'];
+  for (const viewport of [{ width: 640, height: 1000 }, { width: 500, height: 800 }, { width: 380, height: 700 }]) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    await page.goto(base);
+    await page.waitForSelector('.kid-btn');
+    const code = await page.evaluate(async (kids) => {
+      const { encodeState } = await import('./js/codec.js');
+      return encodeState({ groups: [{ name: '1a', kids }], current: '1a', settings: { mode: 'ampel' } });
+    }, kids);
+    await page.goto(`${base}?x#g=${code}`);
+    await page.waitForSelector('.ampel-name');
+    await page.waitForTimeout(200);
+    const r = await page.evaluate(() => ({
+      pageScroll: document.scrollingElement.scrollHeight > innerHeight + 1,
+      fits: [...document.querySelectorAll('.ampel-box')].every((b) =>
+        [...b.querySelectorAll('.ampel-name')].every((n) => n.offsetTop + n.offsetHeight <= b.clientHeight),
+      ),
+      redVisible: document.querySelector('.ampel-red').getBoundingClientRect().bottom <= innerHeight,
+    }));
+    assert.deepEqual(r, { pageScroll: false, fits: true, redVisible: true }, JSON.stringify(viewport));
+    await context.close();
+  }
+});
